@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -15,7 +15,7 @@ export async function registerRoutes(
   registerAuthRoutes(app);
 
   // User Profiles
-  app.get(api.userProfiles.get.path, async (req, res) => {
+  app.get(api.userProfiles.get.path, isAuthenticated, async (req, res) => {
     const profile = await storage.getUserProfile(req.params.userId);
     if (!profile) {
       return res.status(404).json({ message: "User profile not found" });
@@ -23,7 +23,7 @@ export async function registerRoutes(
     res.json(profile);
   });
 
-  app.put(api.userProfiles.update.path, async (req, res) => {
+  app.put(api.userProfiles.update.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.userProfiles.update.input.parse(req.body);
       const existing = await storage.getUserProfile(req.params.userId);
@@ -42,7 +42,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.userProfiles.create.path, async (req, res) => {
+  app.post(api.userProfiles.create.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.userProfiles.create.input.parse(req.body);
       const profile = await storage.createUserProfile(input);
@@ -55,18 +55,18 @@ export async function registerRoutes(
     }
   });
 
-  app.get(api.userProfiles.list.path, async (req, res) => {
+  app.get(api.userProfiles.list.path, isAuthenticated, async (req, res) => {
     const profiles = await storage.listUserProfiles();
     res.json(profiles);
   });
 
   // Courses
-  app.get(api.courses.list.path, async (req, res) => {
+  app.get(api.courses.list.path, isAuthenticated, async (req, res) => {
     const courses = await storage.listCourses();
     res.json(courses);
   });
 
-  app.post(api.courses.create.path, async (req, res) => {
+  app.post(api.courses.create.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.courses.create.input.parse(req.body);
       const course = await storage.createCourse(input);
@@ -79,7 +79,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put(api.courses.update.path, async (req, res) => {
+  app.put(api.courses.update.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.courses.update.input.parse(req.body);
       const course = await storage.updateCourse(Number(req.params.id), input);
@@ -92,13 +92,13 @@ export async function registerRoutes(
     }
   });
 
-  app.delete(api.courses.delete.path, async (req, res) => {
+  app.delete(api.courses.delete.path, isAuthenticated, async (req, res) => {
     await storage.deleteCourse(Number(req.params.id));
     res.status(204).send();
   });
 
   // Applications
-  app.get(api.applications.list.path, async (req, res) => {
+  app.get(api.applications.list.path, isAuthenticated, async (req, res) => {
     const applications = await storage.listApplications();
     const profiles = await storage.listUserProfiles();
     const courses = await storage.listCourses();
@@ -112,7 +112,7 @@ export async function registerRoutes(
     res.json(withDetails);
   });
 
-  app.post(api.applications.create.path, async (req, res) => {
+  app.post(api.applications.create.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.applications.create.input.parse(req.body);
       const application = await storage.createApplication(input);
@@ -125,7 +125,7 @@ export async function registerRoutes(
     }
   });
 
-  app.patch(api.applications.updateStatus.path, async (req, res) => {
+  app.patch(api.applications.updateStatus.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.applications.updateStatus.input.parse(req.body);
       const appRecord = await storage.updateApplicationStatus(Number(req.params.id), input.status, input.notes);
@@ -139,7 +139,7 @@ export async function registerRoutes(
   });
 
   // Payments
-  app.get(api.payments.list.path, async (req, res) => {
+  app.get(api.payments.list.path, isAuthenticated, async (req, res) => {
     const payments = await storage.listPayments();
     const profiles = await storage.listUserProfiles();
     
@@ -151,7 +151,7 @@ export async function registerRoutes(
     res.json(withDetails);
   });
 
-  app.post(api.payments.create.path, async (req, res) => {
+  app.post(api.payments.create.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.payments.create.input.parse(req.body);
       const payment = await storage.createPayment(input);
@@ -165,7 +165,7 @@ export async function registerRoutes(
   });
 
   // Invoices
-  app.get(api.invoices.list.path, async (req, res) => {
+  app.get(api.invoices.list.path, isAuthenticated, async (req, res) => {
     const invoices = await storage.listInvoices();
     const profiles = await storage.listUserProfiles();
     const courses = await storage.listCourses();
@@ -179,7 +179,7 @@ export async function registerRoutes(
     res.json(withDetails);
   });
 
-  app.post(api.invoices.create.path, async (req, res) => {
+  app.post(api.invoices.create.path, isAuthenticated, async (req, res) => {
     try {
       const input = api.invoices.create.input.parse(req.body);
       const invoice = await storage.createInvoice(input);
@@ -193,7 +193,7 @@ export async function registerRoutes(
   });
 
   // Dashboard Stats
-  app.get(api.dashboard.stats.path, async (req, res) => {
+  app.get(api.dashboard.stats.path, isAuthenticated, async (req, res) => {
     const profiles = await storage.listUserProfiles();
     const apps = await storage.listApplications();
     const pmts = await storage.listPayments();
@@ -215,17 +215,14 @@ export async function registerRoutes(
 async function seedDatabase() {
   const existingCourses = await storage.listCourses();
   if (existingCourses.length === 0) {
-    // Add Spring Campus Courses (Traffic)
     await storage.createCourse({
       name: "Traffic Management", faculty: "Traffic", campus: "Springs", duration: "1 Year",
       registrationFee: "500", depositFee: "700", monthlyInstallment: "1800", totalCost: "22800"
     });
-    // Add Engineering Courses
     await storage.createCourse({
       name: "Electrical Engineering", faculty: "Engineering", campus: "Springs", duration: "18 Months",
       registrationFee: "500", depositFee: "700", monthlyInstallment: "1600", totalCost: "30000"
     });
-    // Add Business Courses
     await storage.createCourse({
       name: "Business Management", faculty: "Business", campus: "Springs", duration: "18 Months",
       registrationFee: "500", depositFee: "700", monthlyInstallment: "1500", totalCost: "28200"
