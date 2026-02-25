@@ -40,6 +40,7 @@ function AuthRouter() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/courses" component={Courses} />
         {/* Redirect everything else to landing or let them 404 */}
         <Route component={Landing} />
       </Switch>

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit2, Trash2, MapPin, Clock, BookOpen, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -14,11 +13,12 @@ import { insertCourseSchema, type CreateCourseRequest } from "@shared/schema";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 
 // Enhance schema for form to handle string->number coercion
 const formSchema = insertCourseSchema.extend({
-  registrationFee: z.coerce.string(), // Keeping as string for input, will cast on submit
+  registrationFee: z.coerce.string(), 
   depositFee: z.coerce.string().optional(),
   monthlyInstallment: z.coerce.string().optional(),
   totalCost: z.coerce.string(),
@@ -27,7 +27,7 @@ const formSchema = insertCourseSchema.extend({
 export default function Courses() {
   const { data: courses, isLoading } = useCourses();
   const { data: profile } = useUserProfile();
-  const isAdmin = profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'clerk';
   const { toast } = useToast();
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -46,7 +46,6 @@ export default function Courses() {
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Cast string inputs to strings (schema expects string types for numeric fields in pgTable mapped to text/numeric)
     const payload: CreateCourseRequest = {
       ...values,
       depositFee: values.depositFee || null,
@@ -98,12 +97,15 @@ export default function Courses() {
 
   if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
+  const springsCourses = courses?.filter(c => c.campus === 'Springs') || [];
+  const braamfonteinCourses = courses?.filter(c => c.campus === 'Braamfontein') || [];
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-display font-bold text-foreground">Programs & Courses</h2>
-          <p className="text-muted-foreground mt-1">Browse our accredited faculties and programs.</p>
+          <p className="text-muted-foreground mt-1">Browse our accredited faculties and programs across all campuses.</p>
         </div>
         
         {isAdmin && (
@@ -134,9 +136,10 @@ export default function Courses() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger className="rounded-lg"><SelectValue placeholder="Select faculty" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            <SelectItem value="Traffic Management">Traffic Management</SelectItem>
-                            <SelectItem value="Engineering Studies">Engineering Studies</SelectItem>
-                            <SelectItem value="Business Studies">Business Studies</SelectItem>
+                            <SelectItem value="Traffic">Traffic Management</SelectItem>
+                            <SelectItem value="Engineering">Engineering Studies</SelectItem>
+                            <SelectItem value="Business">Business Studies</SelectItem>
+                            <SelectItem value="Computer Science">Computer Science</SelectItem>
                             <SelectItem value="Basic Education">Basic Education</SelectItem>
                           </SelectContent>
                         </Select>
@@ -195,70 +198,102 @@ export default function Courses() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {courses?.map((course: any) => (
-          <Card key={course.id} className="rounded-2xl shadow-lg border-border/50 hover:shadow-xl hover:border-primary/20 transition-all duration-300 flex flex-col">
-            <CardHeader className="pb-4 border-b border-border/40 bg-muted/20">
-              <div className="flex justify-between items-start">
-                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 rounded-md font-semibold">
-                  <BookOpen className="w-3 h-3 mr-1" /> {course.faculty}
-                </Badge>
-                {isAdmin && (
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-full" onClick={() => handleEdit(course)}>
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-full" onClick={() => handleDelete(course.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <CardTitle className="text-xl font-display mt-3 leading-tight">{course.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="py-5 flex-1">
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center text-muted-foreground">
-                  <Clock className="w-4 h-4 mr-3 text-primary/70" />
-                  <span className="font-medium">Duration:</span> <span className="ml-1 text-foreground">{course.duration}</span>
-                </div>
-                <div className="flex items-center text-muted-foreground">
-                  <MapPin className="w-4 h-4 mr-3 text-primary/70" />
-                  <span className="font-medium">Campus:</span> <span className="ml-1 text-foreground">{course.campus}</span>
-                </div>
-              </div>
-              
-              <div className="mt-6 bg-accent/5 p-4 rounded-xl border border-accent/10">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm text-muted-foreground">Registration</span>
-                  <span className="font-semibold">R {course.registrationFee}</span>
-                </div>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm text-muted-foreground">Monthly</span>
-                  <span className="font-semibold">R {course.monthlyInstallment || '-'}</span>
-                </div>
-                <div className="flex justify-between items-center mt-3 pt-3 border-t border-border/50">
-                  <span className="text-sm font-bold">Total Cost</span>
-                  <span className="font-bold text-primary">R {course.totalCost}</span>
-                </div>
-              </div>
-            </CardContent>
-            {profile?.role === 'student' && (
-              <CardFooter className="pt-0 pb-6 px-6">
-                <Button className="w-full rounded-xl font-semibold shadow-md hover:-translate-y-0.5 transition-all">
-                  Apply Now
-                </Button>
-              </CardFooter>
-            )}
-          </Card>
-        ))}
-        {courses?.length === 0 && (
-          <div className="col-span-full py-20 text-center text-muted-foreground bg-muted/20 rounded-3xl border border-dashed">
-            <BookOpen className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
-            <p className="text-lg font-medium">No courses available.</p>
+      <Tabs defaultValue="springs" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md mb-8">
+          <TabsTrigger value="springs">Springs Campus</TabsTrigger>
+          <TabsTrigger value="braamfontein">Braamfontein Campus</TabsTrigger>
+        </TabsList>
+        <TabsContent value="springs">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {springsCourses.map((course: any) => (
+              <CourseCard key={course.id} course={course} isAdmin={isAdmin} profile={profile} handleEdit={handleEdit} handleDelete={handleDelete} />
+            ))}
+            {springsCourses.length === 0 && <EmptyState />}
           </div>
-        )}
-      </div>
+        </TabsContent>
+        <TabsContent value="braamfontein">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {braamfonteinCourses.map((course: any) => (
+              <CourseCard key={course.id} course={course} isAdmin={isAdmin} profile={profile} handleEdit={handleEdit} handleDelete={handleDelete} />
+            ))}
+            {braamfonteinCourses.length === 0 && <EmptyState />}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function CourseCard({ course, isAdmin, profile, handleEdit, handleDelete }: any) {
+  return (
+    <Card key={course.id} className="rounded-2xl shadow-lg border-border/50 hover:shadow-xl hover:border-primary/20 transition-all duration-300 flex flex-col">
+      <CardHeader className="pb-4 border-b border-border/40 bg-muted/20">
+        <div className="flex justify-between items-start">
+          <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 rounded-md font-semibold">
+            <BookOpen className="w-3 h-3 mr-1" /> {course.faculty}
+          </Badge>
+          {isAdmin && (
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary rounded-full" onClick={() => handleEdit(course)}>
+                <Edit2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive rounded-full" onClick={() => handleDelete(course.id)}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+        <CardTitle className="text-xl font-display mt-3 leading-tight">{course.name}</CardTitle>
+      </CardHeader>
+      <CardContent className="py-5 flex-1">
+        <div className="space-y-3 text-sm">
+          <div className="flex items-center text-muted-foreground">
+            <Clock className="w-4 h-4 mr-3 text-primary/70" />
+            <span className="font-medium">Duration:</span> <span className="ml-1 text-foreground">{course.duration}</span>
+          </div>
+          <div className="flex items-center text-muted-foreground">
+            <MapPin className="w-4 h-4 mr-3 text-primary/70" />
+            <span className="font-medium">Campus:</span> <span className="ml-1 text-foreground">{course.campus}</span>
+          </div>
+        </div>
+        
+        <div className="mt-6 bg-accent/5 p-4 rounded-xl border border-accent/10">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-sm text-muted-foreground">Registration</span>
+            <span className="font-semibold">R {course.registrationFee}</span>
+          </div>
+          {course.depositFee && (
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-muted-foreground">Admin/Deposit</span>
+              <span className="font-semibold">R {course.depositFee}</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-sm text-muted-foreground">Monthly</span>
+            <span className="font-semibold">R {course.monthlyInstallment || '-'}</span>
+          </div>
+          <div className="flex justify-between items-center mt-3 pt-3 border-t border-border/50">
+            <span className="text-sm font-bold">Total Cost</span>
+            <span className="font-bold text-primary">R {course.totalCost}</span>
+          </div>
+        </div>
+      </CardContent>
+      {profile?.role === 'student' && (
+        <CardFooter className="pt-0 pb-6 px-6">
+          <Button className="w-full rounded-xl font-semibold shadow-md hover:-translate-y-0.5 transition-all">
+            Apply Now
+          </Button>
+        </CardFooter>
+      )}
+    </Card>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="col-span-full py-20 text-center text-muted-foreground bg-muted/20 rounded-3xl border border-dashed">
+      <BookOpen className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
+      <p className="text-lg font-medium">No courses available for this campus.</p>
     </div>
   );
 }

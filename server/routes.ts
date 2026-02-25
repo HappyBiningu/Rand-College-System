@@ -61,7 +61,7 @@ export async function registerRoutes(
   });
 
   // Courses
-  app.get(api.courses.list.path, isAuthenticated, async (req, res) => {
+  app.get(api.courses.list.path, async (req, res) => {
     const courses = await storage.listCourses();
     res.json(courses);
   });

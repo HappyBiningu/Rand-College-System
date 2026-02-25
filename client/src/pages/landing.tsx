@@ -120,12 +120,7 @@ export default function Landing() {
                   size="lg" 
                   variant="outline" 
                   className="rounded-xl h-14 px-8 text-lg font-semibold border-2 hover:bg-muted transition-all duration-300"
-                  onClick={() => {
-                    const coursesSection = document.getElementById('courses-section');
-                    if (coursesSection) {
-                      coursesSection.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }}
+                  onClick={() => window.location.href = '/courses'}
                 >
                   View Courses
                 </Button>
