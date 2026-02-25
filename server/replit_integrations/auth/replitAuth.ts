@@ -104,6 +104,39 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
+  app.post("/api/login", (req, res, next) => {
+    const { username, password } = req.body;
+    if (password === "Rand2026") {
+      // Mock user claims for local login
+      const mockClaims = {
+        sub: `local-${username}`,
+        email: `${username}@randtrainingcollege.co.za`,
+        first_name: username.charAt(0).toUpperCase() + username.slice(1),
+        last_name: "User",
+        profile_image_url: null
+      };
+      
+      const user = {};
+      // Simulate tokens
+      const tokens = {
+        claims: () => mockClaims,
+        access_token: "mock-access-token",
+        refresh_token: "mock-refresh-token",
+        expires_at: Math.floor(Date.now() / 1000) + 3600
+      };
+      
+      updateUserSession(user, tokens as any);
+      upsertUser(mockClaims).then(() => {
+        req.login(user, (err) => {
+          if (err) return next(err);
+          res.json({ success: true, user });
+        });
+      }).catch(next);
+    } else {
+      res.status(401).json({ message: "Invalid credentials" });
+    }
+  });
+
   app.get("/api/login", (req, res, next) => {
     ensureStrategy(req.hostname);
     passport.authenticate(`replitauth:${req.hostname}`, {

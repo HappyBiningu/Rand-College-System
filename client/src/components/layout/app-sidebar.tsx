@@ -48,7 +48,7 @@ export function AppSidebar() {
       title: "Students",
       url: "/students",
       icon: Users,
-      roles: ['admin', 'clerk', 'faculty']
+      roles: ['admin', 'clerk', 'faculty', 'student']
     },
     {
       title: "Invoices",

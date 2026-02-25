@@ -1,7 +1,45 @@
 import { Button } from "@/components/ui/button";
-import { GraduationCap, ArrowRight, BookOpen, Users, Award, ShieldCheck } from "lucide-react";
+import { GraduationCap, ArrowRight, BookOpen, Users, Award, ShieldCheck, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Landing() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const { toast } = useToast();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: "Please check your credentials and try again.",
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred.",
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -15,13 +53,40 @@ export default function Landing() {
             <p className="text-xs text-primary/80 tracking-widest uppercase font-bold">College</p>
           </div>
         </div>
-        <Button 
-          size="lg" 
-          className="rounded-full px-8 shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
-          onClick={() => window.location.href = '/api/login'}
-        >
-          Sign In / Apply
-        </Button>
+        <div className="flex items-center gap-4">
+          <form onSubmit={handleLogin} className="hidden md:flex items-center gap-2">
+            <Input 
+              placeholder="Username" 
+              className="h-10 w-32 rounded-lg"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+            <Input 
+              type="password"
+              placeholder="Password" 
+              className="h-10 w-32 rounded-lg"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <Button 
+              type="submit"
+              size="sm"
+              disabled={isLoggingIn}
+              className="rounded-lg h-10 px-4 shadow-lg shadow-primary/20"
+            >
+              {isLoggingIn ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
+            </Button>
+          </form>
+          <Button 
+            size="lg" 
+            className="md:hidden rounded-full px-8 shadow-lg shadow-primary/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"
+            onClick={() => window.location.href = '/api/login'}
+          >
+            Apply Now
+          </Button>
+        </div>
       </header>
 
       {/* Hero Section */}
@@ -55,6 +120,12 @@ export default function Landing() {
                   size="lg" 
                   variant="outline" 
                   className="rounded-xl h-14 px-8 text-lg font-semibold border-2 hover:bg-muted transition-all duration-300"
+                  onClick={() => {
+                    const coursesSection = document.getElementById('courses-section');
+                    if (coursesSection) {
+                      coursesSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                 >
                   View Courses
                 </Button>
@@ -99,7 +170,7 @@ export default function Landing() {
         </section>
 
         {/* Features */}
-        <section className="py-24 bg-muted/50 border-t border-border/50">
+        <section id="courses-section" className="py-24 bg-muted/50 border-t border-border/50">
           <div className="max-w-7xl mx-auto px-6 md:px-12">
             <div className="text-center max-w-2xl mx-auto mb-16">
               <h2 className="text-3xl md:text-4xl font-display font-bold">Why Choose Us?</h2>
