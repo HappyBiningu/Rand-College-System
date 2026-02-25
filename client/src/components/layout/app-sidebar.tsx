@@ -51,6 +51,12 @@ export function AppSidebar() {
       roles: ['admin', 'clerk', 'faculty']
     },
     {
+      title: "Invoices",
+      url: "/invoices",
+      icon: FileText,
+      roles: ['admin', 'clerk', 'student']
+    },
+    {
       title: "Fees & Payments",
       url: "/payments",
       icon: CreditCard,

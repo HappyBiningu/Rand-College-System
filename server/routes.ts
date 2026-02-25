@@ -42,6 +42,19 @@ export async function registerRoutes(
     }
   });
 
+  app.post(api.userProfiles.create.path, async (req, res) => {
+    try {
+      const input = api.userProfiles.create.input.parse(req.body);
+      const profile = await storage.createUserProfile(input);
+      res.status(201).json(profile);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
   app.get(api.userProfiles.list.path, async (req, res) => {
     const profiles = await storage.listUserProfiles();
     res.json(profiles);
@@ -143,6 +156,34 @@ export async function registerRoutes(
       const input = api.payments.create.input.parse(req.body);
       const payment = await storage.createPayment(input);
       res.status(201).json(payment);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      throw err;
+    }
+  });
+
+  // Invoices
+  app.get(api.invoices.list.path, async (req, res) => {
+    const invoices = await storage.listInvoices();
+    const profiles = await storage.listUserProfiles();
+    const courses = await storage.listCourses();
+
+    const withDetails = invoices.map(inv => ({
+      ...inv,
+      user: profiles.find(p => p.userId === inv.userId),
+      course: courses.find(c => c.id === inv.courseId)
+    }));
+    
+    res.json(withDetails);
+  });
+
+  app.post(api.invoices.create.path, async (req, res) => {
+    try {
+      const input = api.invoices.create.input.parse(req.body);
+      const invoice = await storage.createInvoice(input);
+      res.status(201).json(invoice);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });

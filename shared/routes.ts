@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { insertUserProfileSchema, insertCourseSchema, insertApplicationSchema, insertPaymentSchema, courses, userProfiles, applications, payments } from "./schema";
+import { insertUserProfileSchema, insertCourseSchema, insertApplicationSchema, insertPaymentSchema, insertInvoiceSchema, courses, userProfiles, applications, payments, invoices } from "./schema";
 
 export const errorSchemas = {
   validation: z.object({
@@ -41,6 +41,15 @@ export const api = {
       path: "/api/user-profiles" as const,
       responses: {
         200: z.array(z.custom<typeof userProfiles.$inferSelect>()),
+      }
+    },
+    create: {
+      method: "POST" as const,
+      path: "/api/user-profiles" as const,
+      input: insertUserProfileSchema,
+      responses: {
+        201: z.custom<typeof userProfiles.$inferSelect>(),
+        400: errorSchemas.validation,
       }
     }
   },
@@ -120,6 +129,24 @@ export const api = {
       input: insertPaymentSchema,
       responses: {
         201: z.custom<typeof payments.$inferSelect>(),
+        400: errorSchemas.validation,
+      }
+    }
+  },
+  invoices: {
+    list: {
+      method: "GET" as const,
+      path: "/api/invoices" as const,
+      responses: {
+        200: z.array(z.any()),
+      }
+    },
+    create: {
+      method: "POST" as const,
+      path: "/api/invoices" as const,
+      input: insertInvoiceSchema,
+      responses: {
+        201: z.custom<typeof invoices.$inferSelect>(),
         400: errorSchemas.validation,
       }
     }

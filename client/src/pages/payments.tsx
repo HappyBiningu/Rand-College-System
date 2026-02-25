@@ -22,16 +22,22 @@ export default function Payments() {
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
 
+  const { data: profiles } = useAllUserProfiles();
+  const [selectedStudent, setSelectedStudent] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("bank");
+
   const isStaff = profile?.role === 'admin' || profile?.role === 'clerk';
+  const students = profiles?.filter(p => p.role === 'student') || [];
 
   const handleRecord = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount) return;
+    if (!amount || (isStaff && !selectedStudent)) return;
     
     createMutation.mutate({
-      userId: user!.id, // In a real app, staff would select the user
-      amount: amount.toString(), // Sent as string to match schema
+      userId: isStaff ? selectedStudent : user!.id,
+      amount: amount.toString(),
       receiptNumber: `REC-${Math.floor(Math.random() * 100000)}`,
+      paymentMethod: paymentMethod,
       status: "completed",
       description: desc
     }, {
@@ -39,6 +45,7 @@ export default function Payments() {
         setIsOpen(false);
         setAmount("");
         setDesc("");
+        setSelectedStudent("");
         toast({ title: "Success", description: "Payment recorded successfully." });
       }
     });
@@ -65,14 +72,38 @@ export default function Payments() {
               <DialogHeader><DialogTitle className="font-display text-2xl">Record New Payment</DialogTitle></DialogHeader>
               <form onSubmit={handleRecord} className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-semibold">Amount (Rands)</label>
-                  <Input type="number" required value={amount} onChange={e => setAmount(e.target.value)} className="rounded-xl h-12" />
+                  <label className="text-sm font-semibold">Student</label>
+                  <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                    <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Select student..." /></SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {students.map((s: any) => (
+                        <SelectItem key={s.userId} value={s.userId}>ST-{s.userId.substring(0,6)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">Amount (Rands)</label>
+                    <Input type="number" required value={amount} onChange={e => setAmount(e.target.value)} className="rounded-xl h-11" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">Method</label>
+                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                      <SelectTrigger className="rounded-xl h-11"><SelectValue /></SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="bank">Bank Transfer</SelectItem>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Description</label>
-                  <Input placeholder="e.g. Registration Fee" required value={desc} onChange={e => setDesc(e.target.value)} className="rounded-xl h-12" />
+                  <Input placeholder="e.g. Registration Fee" required value={desc} onChange={e => setDesc(e.target.value)} className="rounded-xl h-11" />
                 </div>
-                <Button type="submit" className="w-full h-12 rounded-xl font-bold" disabled={createMutation.isPending}>
+                <Button type="submit" className="w-full h-12 rounded-xl font-bold mt-2" disabled={createMutation.isPending}>
                   {createMutation.isPending ? <Loader2 className="animate-spin h-5 w-5" /> : "Save Payment"}
                 </Button>
               </form>

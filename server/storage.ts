@@ -32,6 +32,10 @@ export interface IStorage {
   // Payments
   listPayments(): Promise<Payment[]>;
   createPayment(payment: CreatePaymentRequest): Promise<Payment>;
+
+  // Invoices
+  listInvoices(): Promise<Invoice[]>;
+  createInvoice(invoice: CreateInvoiceRequest): Promise<Invoice>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -100,6 +104,15 @@ export class DatabaseStorage implements IStorage {
   }
   async createPayment(payment: CreatePaymentRequest): Promise<Payment> {
     const [created] = await db.insert(payments).values(payment).returning();
+    return created;
+  }
+
+  // Invoices
+  async listInvoices(): Promise<Invoice[]> {
+    return await db.select().from(invoices);
+  }
+  async createInvoice(invoice: CreateInvoiceRequest): Promise<Invoice> {
+    const [created] = await db.insert(invoices).values(invoice).returning();
     return created;
   }
 }

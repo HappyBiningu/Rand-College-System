@@ -66,6 +66,7 @@ function AuthRouter() {
         <Route path="/courses" component={Courses} />
         <Route path="/applications" component={Applications} />
         <Route path="/students" component={Students} />
+        <Route path="/invoices" component={Invoices} />
         <Route path="/payments" component={Payments} />
         <Route component={NotFound} />
       </Switch>
