@@ -15,6 +15,7 @@ import Dashboard from "@/pages/dashboard";
 import Courses from "@/pages/courses";
 import Applications from "@/pages/applications";
 import Students from "@/pages/students";
+import Invoices from "@/pages/invoices";
 import Payments from "@/pages/payments";
 import NotFound from "@/pages/not-found";
 
