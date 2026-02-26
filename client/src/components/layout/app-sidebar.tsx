@@ -74,8 +74,8 @@ export function AppSidebar() {
             <GraduationCap className="h-8 w-8" />
           </div>
           <div>
-            <h2 className="text-xl font-display font-bold text-sidebar-foreground leading-tight">Rand Training</h2>
-            <p className="text-xs text-sidebar-foreground/70 tracking-widest uppercase font-semibold">College</p>
+            <h2 className="text-xl font-display font-bold text-sidebar-foreground leading-tight">Rand Training College</h2>
+            <p className="text-xs text-sidebar-foreground/70 tracking-widest uppercase font-semibold">Excellence in education</p>
           </div>
         </div>
       </SidebarHeader>

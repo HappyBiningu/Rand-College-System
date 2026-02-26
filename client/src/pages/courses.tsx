@@ -137,11 +137,14 @@ export default function Courses() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl><SelectTrigger className="rounded-lg"><SelectValue placeholder="Select faculty" /></SelectTrigger></FormControl>
                           <SelectContent>
-                            <SelectItem value="Traffic">Traffic Management</SelectItem>
-                            <SelectItem value="Engineering">Engineering Studies</SelectItem>
-                            <SelectItem value="Business">Business Studies</SelectItem>
-                            <SelectItem value="Computer Science">Computer Science</SelectItem>
-                            <SelectItem value="Basic Education">Basic Education</SelectItem>
+                            <SelectItem value="Engineering">Faculty of Engineering Studies</SelectItem>
+                            <SelectItem value="Traffic">Police & Traffic Law</SelectItem>
+                            <SelectItem value="Business">Faculty of Business Studies</SelectItem>
+                            <SelectItem value="Computer Science">Information Technology Studies</SelectItem>
+                            <SelectItem value="Hospitality">Hospitality & Catering</SelectItem>
+                            <SelectItem value="Basic Education">Basic Education / Educare</SelectItem>
+                            <SelectItem value="Short Courses">Short Courses</SelectItem>
+                            <SelectItem value="Beauty Therapy">Beauty Therapy</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
