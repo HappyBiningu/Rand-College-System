@@ -16,22 +16,36 @@ export async function registerRoutes(
 
   // User Profiles
   app.get(api.userProfiles.get.path, isAuthenticated, async (req, res) => {
-    const profile = await storage.getUserProfile(req.params.userId);
-    if (!profile) {
-      return res.status(404).json({ message: "User profile not found" });
+    const userId = typeof req.params.userId === "string" ? req.params.userId : req.params.userId?.[0] ?? "";
+    const profile = await storage.getUserProfile(userId);
+    if (profile) return res.json(profile);
+    // Simple login user: return default admin profile so they see all nav (Fees & Payments, etc.)
+    if (userId === "tino") {
+      return res.json({
+        id: 0,
+        userId: "tino",
+        role: "admin",
+        studentIdNumber: null,
+        campus: null,
+        idNumber: null,
+        phone: null,
+        address: null,
+        isActive: true,
+      });
     }
-    res.json(profile);
+    return res.status(404).json({ message: "User profile not found" });
   });
 
   app.put(api.userProfiles.update.path, isAuthenticated, async (req, res) => {
     try {
+      const userId = typeof req.params.userId === "string" ? req.params.userId : req.params.userId?.[0] ?? "";
       const input = api.userProfiles.update.input.parse(req.body);
-      const existing = await storage.getUserProfile(req.params.userId);
+      const existing = await storage.getUserProfile(userId);
       let profile;
       if (existing) {
-        profile = await storage.updateUserProfile(req.params.userId, input);
+        profile = await storage.updateUserProfile(userId, input);
       } else {
-        profile = await storage.createUserProfile({ userId: req.params.userId, ...input });
+        profile = await storage.createUserProfile({ userId, ...input });
       }
       res.json(profile);
     } catch (err) {
@@ -56,8 +70,24 @@ export async function registerRoutes(
   });
 
   app.get(api.userProfiles.list.path, isAuthenticated, async (req, res) => {
-    const profiles = await storage.listUserProfiles();
-    res.json(profiles);
+    const [profiles, authUsers, applicationsList, courses] = await Promise.all([
+      storage.listUserProfiles(),
+      storage.listUsers(),
+      storage.listApplications(),
+      storage.listCourses(),
+    ]);
+    const withUser = profiles.map(p => {
+      const approvedApp = p.role === "student"
+        ? applicationsList.find(a => a.userId === p.userId && a.status === "approved")
+        : null;
+      const enrolledCourse = approvedApp ? courses.find(c => c.id === approvedApp.courseId)?.name ?? null : null;
+      return {
+        ...p,
+        userAuth: authUsers.find(u => u.id === p.userId) ?? null,
+        enrolledCourse,
+      };
+    });
+    res.json(withUser);
   });
 
   // Courses
@@ -99,16 +129,18 @@ export async function registerRoutes(
 
   // Applications
   app.get(api.applications.list.path, isAuthenticated, async (req, res) => {
-    const applications = await storage.listApplications();
-    const profiles = await storage.listUserProfiles();
-    const courses = await storage.listCourses();
-
-    const withDetails = applications.map(app => ({
+    const [applicationsList, profiles, courses, authUsers] = await Promise.all([
+      storage.listApplications(),
+      storage.listUserProfiles(),
+      storage.listCourses(),
+      storage.listUsers(),
+    ]);
+    const withDetails = applicationsList.map(app => ({
       ...app,
       user: profiles.find(p => p.userId === app.userId),
-      course: courses.find(c => c.id === app.courseId)
+      userAuth: authUsers.find(u => u.id === app.userId) ?? null,
+      course: courses.find(c => c.id === app.courseId),
     }));
-    
     res.json(withDetails);
   });
 
@@ -140,14 +172,16 @@ export async function registerRoutes(
 
   // Payments
   app.get(api.payments.list.path, isAuthenticated, async (req, res) => {
-    const payments = await storage.listPayments();
-    const profiles = await storage.listUserProfiles();
-    
-    const withDetails = payments.map(payment => ({
+    const [paymentsList, profiles, authUsers] = await Promise.all([
+      storage.listPayments(),
+      storage.listUserProfiles(),
+      storage.listUsers(),
+    ]);
+    const withDetails = paymentsList.map(payment => ({
       ...payment,
-      user: profiles.find(p => p.userId === payment.userId)
+      user: profiles.find(p => p.userId === payment.userId),
+      userAuth: authUsers.find(u => u.id === payment.userId) ?? null,
     }));
-    
     res.json(withDetails);
   });
 
@@ -166,17 +200,36 @@ export async function registerRoutes(
 
   // Invoices
   app.get(api.invoices.list.path, isAuthenticated, async (req, res) => {
-    const invoices = await storage.listInvoices();
-    const profiles = await storage.listUserProfiles();
-    const courses = await storage.listCourses();
-
-    const withDetails = invoices.map(inv => ({
+    const [invoicesList, profiles, courses, authUsers] = await Promise.all([
+      storage.listInvoices(),
+      storage.listUserProfiles(),
+      storage.listCourses(),
+      storage.listUsers(),
+    ]);
+    const withDetails = invoicesList.map(inv => ({
       ...inv,
       user: profiles.find(p => p.userId === inv.userId),
-      course: courses.find(c => c.id === inv.courseId)
+      userAuth: authUsers.find(u => u.id === inv.userId) ?? null,
+      course: courses.find(c => c.id === inv.courseId),
     }));
-    
     res.json(withDetails);
+  });
+
+  app.patch("/api/invoices/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const body = req.body as { status?: string; dueDate?: string | null };
+      if (!body.status && body.dueDate === undefined) {
+        return res.status(400).json({ message: "Provide status and/or dueDate" });
+      }
+      const updates: { status?: string; dueDate?: Date | null } = {};
+      if (body.status) updates.status = body.status;
+      if (body.dueDate !== undefined) updates.dueDate = body.dueDate ? new Date(body.dueDate) : null;
+      const updated = await storage.updateInvoice(id, updates);
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: (err as Error).message });
+    }
   });
 
   app.post(api.invoices.create.path, isAuthenticated, async (req, res) => {

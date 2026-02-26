@@ -108,8 +108,8 @@ export default function Applications() {
             <TableHeader className="bg-muted/50">
               <TableRow>
                 <TableHead className="font-semibold">Date</TableHead>
-                {isStaff && <TableHead className="font-semibold">Applicant ID</TableHead>}
-                <TableHead className="font-semibold">Course ID</TableHead>
+                {isStaff && <TableHead className="font-semibold">Applicant</TableHead>}
+                <TableHead className="font-semibold">Course</TableHead>
                 <TableHead className="font-semibold">Status</TableHead>
                 {isStaff && <TableHead className="text-right font-semibold">Actions</TableHead>}
               </TableRow>
@@ -118,8 +118,12 @@ export default function Applications() {
               {visibleApps?.map((app: any) => (
                 <TableRow key={app.id} className="hover:bg-muted/30 transition-colors">
                   <TableCell className="font-medium">{format(new Date(app.applicationDate), 'MMM d, yyyy')}</TableCell>
-                  {isStaff && <TableCell className="text-muted-foreground">{app.userId.substring(0, 8)}...</TableCell>}
-                  <TableCell>Course #{app.courseId}</TableCell>
+                  {isStaff && (
+                    <TableCell className="text-muted-foreground">
+                      {app.userAuth ? [app.userAuth.firstName, app.userAuth.lastName].filter(Boolean).join(' ') || app.userAuth.email : app.userId?.substring(0, 8) + '...'}
+                    </TableCell>
+                  )}
+                  <TableCell>{app.course?.name ?? `Course #${app.courseId}`}</TableCell>
                   <TableCell>{getStatusBadge(app.status)}</TableCell>
                   {isStaff && (
                     <TableCell className="text-right">

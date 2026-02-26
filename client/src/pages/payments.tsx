@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { usePayments, useCreatePayment } from "@/hooks/use-payments";
-import { useUserProfile } from "@/hooks/use-profiles";
+import { useUserProfile, useAllUserProfiles } from "@/hooks/use-profiles";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -118,7 +118,7 @@ export default function Payments() {
             <TableRow>
               <TableHead className="font-semibold py-4">Date</TableHead>
               <TableHead className="font-semibold">Receipt No.</TableHead>
-              {isStaff && <TableHead className="font-semibold">Student ID</TableHead>}
+              {isStaff && <TableHead className="font-semibold">Student</TableHead>}
               <TableHead className="font-semibold">Description</TableHead>
               <TableHead className="text-right font-semibold">Amount</TableHead>
             </TableRow>
@@ -133,7 +133,11 @@ export default function Payments() {
                     {payment.receiptNumber}
                   </div>
                 </TableCell>
-                {isStaff && <TableCell className="text-sm text-muted-foreground">{payment.userId.substring(0,8)}...</TableCell>}
+                {isStaff && (
+                  <TableCell className="text-sm text-muted-foreground">
+                    {payment.userAuth ? [payment.userAuth.firstName, payment.userAuth.lastName].filter(Boolean).join(' ') || payment.userAuth.email : payment.userId?.substring(0,8) + '...'}
+                  </TableCell>
+                )}
                 <TableCell>{payment.description}</TableCell>
                 <TableCell className="text-right font-bold text-foreground">R {payment.amount}</TableCell>
               </TableRow>

@@ -19,13 +19,11 @@ export default function Students() {
   const { toast } = useToast();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [newStudent, setNewStudent] = useState({
-    userId: "",
-    campus: "Springs",
-    studentIdNumber: "",
-    phone: "",
-    address: ""
-  });
+  const initialStudent = {
+    userId: "", campus: "Springs", studentIdNumber: "", phone: "", address: "",
+    idNumber: "", dateOfBirth: "", gender: "", nextOfKin: "", emergencyContact: ""
+  };
+  const [newStudent, setNewStudent] = useState(initialStudent);
 
   if (isLoading) return <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
@@ -40,12 +38,17 @@ export default function Students() {
       role: 'student',
       campus: newStudent.campus,
       studentIdNumber: newStudent.studentIdNumber || `ST-${Math.floor(Math.random() * 10000)}`,
-      phone: newStudent.phone,
-      address: newStudent.address
-    }, {
+      phone: newStudent.phone || undefined,
+      address: newStudent.address || undefined,
+      idNumber: newStudent.idNumber || undefined,
+      dateOfBirth: newStudent.dateOfBirth || undefined,
+      gender: newStudent.gender || undefined,
+      nextOfKin: newStudent.nextOfKin || undefined,
+      emergencyContact: newStudent.emergencyContact || undefined,
+    } as any, {
       onSuccess: () => {
         setIsOpen(false);
-        setNewStudent({ userId: "", campus: "Springs", studentIdNumber: "", phone: "", address: "" });
+        setNewStudent(initialStudent);
         toast({ title: "Success", description: "Student registered successfully." });
       }
     });
@@ -63,12 +66,13 @@ export default function Students() {
           <DialogTrigger asChild>
             <Button className="rounded-xl shadow-lg shadow-primary/20"><UserPlus className="mr-2 h-4 w-4"/> Register Student</Button>
           </DialogTrigger>
-          <DialogContent className="rounded-2xl sm:max-w-[425px]">
+          <DialogContent className="rounded-2xl sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle className="font-display text-2xl">Register New Student</DialogTitle></DialogHeader>
+            <p className="text-xs text-muted-foreground">User must already have an account; use their user ID (e.g. from auth).</p>
             <form onSubmit={handleRegister} className="space-y-4 py-4">
               <div className="space-y-2">
-                <label className="text-sm font-semibold">User ID (from Auth)</label>
-                <Input required value={newStudent.userId} onChange={e => setNewStudent({...newStudent, userId: e.target.value})} className="rounded-xl h-11" placeholder="e.g. u_123..." />
+                <label className="text-sm font-semibold">User ID (required)</label>
+                <Input required value={newStudent.userId} onChange={e => setNewStudent({...newStudent, userId: e.target.value})} className="rounded-xl h-11" placeholder="e.g. tino or auth user id" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -84,16 +88,45 @@ export default function Students() {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-semibold">Student ID No.</label>
-                  <Input value={newStudent.studentIdNumber} onChange={e => setNewStudent({...newStudent, studentIdNumber: e.target.value})} className="rounded-xl h-11" placeholder="Auto-generated if empty" />
+                  <Input value={newStudent.studentIdNumber} onChange={e => setNewStudent({...newStudent, studentIdNumber: e.target.value})} className="rounded-xl h-11" placeholder="Auto if empty" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">ID / Passport No.</label>
+                  <Input value={newStudent.idNumber} onChange={e => setNewStudent({...newStudent, idNumber: e.target.value})} className="rounded-xl h-11" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">Date of birth</label>
+                  <Input type="date" value={newStudent.dateOfBirth} onChange={e => setNewStudent({...newStudent, dateOfBirth: e.target.value})} className="rounded-xl h-11" />
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-semibold">Phone Number</label>
-                <Input value={newStudent.phone} onChange={e => setNewStudent({...newStudent, phone: e.target.value})} className="rounded-xl h-11" />
+                <label className="text-sm font-semibold">Gender</label>
+                <Select value={newStudent.gender} onValueChange={v => setNewStudent({...newStudent, gender: v})}>
+                  <SelectTrigger className="rounded-xl h-11"><SelectValue placeholder="Optional" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">Phone</label>
+                <Input type="tel" value={newStudent.phone} onChange={e => setNewStudent({...newStudent, phone: e.target.value})} className="rounded-xl h-11" />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold">Address</label>
                 <Input value={newStudent.address} onChange={e => setNewStudent({...newStudent, address: e.target.value})} className="rounded-xl h-11" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">Next of kin</label>
+                <Input value={newStudent.nextOfKin} onChange={e => setNewStudent({...newStudent, nextOfKin: e.target.value})} className="rounded-xl h-11" placeholder="Name and contact" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold">Emergency contact</label>
+                <Input value={newStudent.emergencyContact} onChange={e => setNewStudent({...newStudent, emergencyContact: e.target.value})} className="rounded-xl h-11" placeholder="Name and phone" />
               </div>
               <Button type="submit" className="w-full h-12 rounded-xl font-bold mt-2" disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? <Loader2 className="animate-spin h-5 w-5" /> : "Complete Registration"}
@@ -107,24 +140,29 @@ export default function Students() {
         <Table>
           <TableHeader className="bg-muted/50">
             <TableRow>
-              <TableHead className="font-semibold py-4">Student Info</TableHead>
+              <TableHead className="font-semibold py-4">Student</TableHead>
               <TableHead className="font-semibold">Student ID</TableHead>
               <TableHead className="font-semibold">Campus</TableHead>
+              <TableHead className="font-semibold">Course</TableHead>
               <TableHead className="font-semibold">Contact</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map((student: any) => (
+            {students.map((student: any) => {
+              const name = student.userAuth ? [student.userAuth.firstName, student.userAuth.lastName].filter(Boolean).join(' ') : null;
+              const email = student.userAuth?.email ?? (student.userId ? `user_${student.userId.substring(0,6)}@rand.ac.za` : '');
+              return (
               <TableRow key={student.id} className="hover:bg-muted/30 transition-colors">
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 border border-primary/10">
                       <AvatarFallback className="bg-primary/5 text-primary font-bold">
-                        {student.idNumber ? student.idNumber.substring(0,2) : 'ST'}
+                        {(name || student.idNumber || 'ST').substring(0,2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-semibold text-foreground">User {student.userId.substring(0,6)}</p>
+                      <p className="font-semibold text-foreground">{name || `User ${student.userId?.substring(0,6)}`}</p>
+                      <p className="text-xs text-muted-foreground">{email}</p>
                       <Badge variant="secondary" className="mt-1 text-[10px] uppercase tracking-wider">Active</Badge>
                     </div>
                   </div>
@@ -136,17 +174,18 @@ export default function Students() {
                     {student.campus || 'N/A'}
                   </div>
                 </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{student.enrolledCourse || '—'}</TableCell>
                 <TableCell>
                   <div className="space-y-1">
                     {student.phone && <div className="flex items-center text-xs text-muted-foreground"><Phone className="h-3 w-3 mr-2" />{student.phone}</div>}
-                    <div className="flex items-center text-xs text-muted-foreground"><Mail className="h-3 w-3 mr-2" />user_{student.userId.substring(0,4)}@student.rand.ac.za</div>
+                    {!student.phone && <span className="text-xs text-muted-foreground">—</span>}
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            );})}
             {students.length === 0 && (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                   No students found in the directory.
                 </TableCell>
               </TableRow>

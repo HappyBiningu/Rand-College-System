@@ -1,64 +1,39 @@
-import * as client from "openid-client";
-import { Strategy, type VerifyFunction } from "openid-client/passport";
-
 import passport from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import type { Express, RequestHandler } from "express";
-import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 
-const getOidcConfig = memoize(
-  async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
-  },
-  { maxAge: 3600 * 1000 }
-);
+const AUTH_USERNAME = "tino";
+const AUTH_PASSWORD = "rand123";
 
 export function getSession() {
-  const sessionTtlMs = 7 * 24 * 60 * 60 * 1000; // 1 week in milliseconds
-  const sessionTtlSec = 7 * 24 * 60 * 60; // 1 week in seconds (connect-pg-simple expects seconds)
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: sessionTtlSec,
-    tableName: "sessions",
-  });
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const secret =
+    process.env.SESSION_SECRET?.trim() || "dev-session-secret-change-in-production";
+  const store =
+    process.env.DATABASE_URL?.trim()
+      ? (() => {
+          const pgStore = connectPg(session);
+          return new pgStore({
+            conString: process.env.DATABASE_URL,
+            createTableIfMissing: false,
+            ttl: sessionTtl,
+            tableName: "sessions",
+          });
+        })()
+      : undefined;
   return session({
-    secret: process.env.SESSION_SECRET!,
-    store: sessionStore,
+    secret,
+    store,
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      maxAge: sessionTtlMs,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: sessionTtl,
     },
-  });
-}
-
-function updateUserSession(
-  user: any,
-  tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers
-) {
-  user.claims = tokens.claims();
-  user.access_token = tokens.access_token;
-  user.refresh_token = tokens.refresh_token;
-  user.expires_at = user.claims?.exp;
-}
-
-async function upsertUser(claims: any) {
-  await authStorage.upsertUser({
-    id: claims["sub"],
-    email: claims["email"],
-    firstName: claims["first_name"],
-    lastName: claims["last_name"],
-    profileImageUrl: claims["profile_image_url"],
   });
 }
 
@@ -68,128 +43,54 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  const config = await getOidcConfig();
-
-  const verify: VerifyFunction = async (
-    tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
-    verified: passport.AuthenticateCallback
-  ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
-  };
-
-  // Keep track of registered strategies
-  const registeredStrategies = new Set<string>();
-
-  // Helper function to ensure strategy exists for a domain
-  const ensureStrategy = (domain: string) => {
-    const strategyName = `replitauth:${domain}`;
-    if (!registeredStrategies.has(strategyName)) {
-      const strategy = new Strategy(
-        {
-          name: strategyName,
-          config,
-          scope: "openid email profile offline_access",
-          callbackURL: `https://${domain}/api/callback`,
-        },
-        verify
-      );
-      passport.use(strategy);
-      registeredStrategies.add(strategyName);
-    }
-  };
+  passport.use(
+    new LocalStrategy(async (username, password, done) => {
+      if (username === AUTH_USERNAME && password === AUTH_PASSWORD) {
+        try {
+          await authStorage.upsertUser({
+            id: AUTH_USERNAME,
+            email: null,
+            firstName: null,
+            lastName: null,
+            profileImageUrl: null,
+          });
+        } catch {
+          // DB unreachable; login still succeeds
+        }
+        return done(null, { id: AUTH_USERNAME, username: AUTH_USERNAME });
+      }
+      return done(null, false, { message: "Invalid username or password" });
+    })
+  );
 
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
+  app.get("/api/login", (_req, res) => {
+    res.redirect("/");
+  });
+
   app.post("/api/login", (req, res, next) => {
-    const { username, password } = req.body;
-    if (password === "Rand2026") {
-      // Mock user claims for local login
-      const mockClaims = {
-        sub: `local-${username}`,
-        email: `${username}@randtrainingcollege.co.za`,
-        first_name: username.charAt(0).toUpperCase() + username.slice(1),
-        last_name: "User",
-        profile_image_url: null
-      };
-      
-      const user = {};
-      // Simulate tokens
-      const tokens = {
-        claims: () => mockClaims,
-        access_token: "mock-access-token",
-        refresh_token: "mock-refresh-token",
-        expires_at: Math.floor(Date.now() / 1000) + 3600
-      };
-      
-      updateUserSession(user, tokens as any);
-      upsertUser(mockClaims).then(() => {
-        req.login(user, (err) => {
-          if (err) return next(err);
-          res.json({ success: true, user });
-        });
-      }).catch(next);
-    } else {
-      res.status(401).json({ message: "Invalid credentials" });
-    }
-  });
-
-  app.get("/api/login", (req, res, next) => {
-    ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access"],
-    })(req, res, next);
-  });
-
-  app.get("/api/callback", (req, res, next) => {
-    ensureStrategy(req.hostname);
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+    passport.authenticate("local", (err, user, info) => {
+      if (err) return next(err);
+      if (!user) return res.status(401).json({ message: info?.message || "Invalid credentials" });
+      req.login(user, (loginErr) => {
+        if (loginErr) return next(loginErr);
+        return res.json({ success: true, user });
+      });
     })(req, res, next);
   });
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
-      res.redirect(
-        client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
-        }).href
-      );
+      res.redirect("/");
     });
   });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = req.user as any;
-
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated()) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
-    return next();
-  }
-
-  const refreshToken = user.refresh_token;
-  if (!refreshToken) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-
-  try {
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
-    return next();
-  } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
+  return next();
 };

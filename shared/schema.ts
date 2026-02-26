@@ -12,6 +12,11 @@ export const userProfiles = pgTable("user_profiles", {
   idNumber: text("id_number"),
   phone: text("phone"),
   address: text("address"),
+  dateOfBirth: text("date_of_birth"), // ISO date string
+  gender: text("gender"), // 'male', 'female', 'other', 'prefer_not_to_say'
+  nextOfKin: text("next_of_kin"),
+  emergencyContact: text("emergency_contact"),
+  enrollmentDate: timestamp("enrollment_date"),
   isActive: boolean("is_active").default(true),
 });
 

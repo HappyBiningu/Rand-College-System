@@ -81,7 +81,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="bg-sidebar text-sidebar-foreground px-4 py-6">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50 text-xs font-bold uppercase tracking-wider mb-4">
+          <SidebarGroupLabel className="text-sidebar-foreground text-xs font-bold uppercase tracking-wider mb-4">
             Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -97,12 +97,12 @@ export function AppSidebar() {
                         rounded-xl transition-all duration-200 py-6 px-4
                         ${isActive 
                           ? 'bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-md' 
-                          : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground hover:translate-x-1'
+                          : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:translate-x-1'
                         }
                       `}
                     >
                       <Link href={item.url} className="flex items-center gap-3 w-full">
-                        <item.icon className={`h-5 w-5 ${isActive ? 'text-sidebar-primary' : ''}`} />
+                        <item.icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground'}`} />
                         <span className="text-base">{item.title}</span>
                       </Link>
                     </SidebarMenuButton>

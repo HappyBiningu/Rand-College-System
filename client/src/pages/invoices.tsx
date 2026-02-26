@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useInvoices, useCreateInvoice } from "@/hooks/use-invoices";
+import { useInvoices, useCreateInvoice, useUpdateInvoiceStatus } from "@/hooks/use-invoices";
 import { useUserProfile, useAllUserProfiles } from "@/hooks/use-profiles";
 import { useCourses } from "@/hooks/use-courses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,14 @@ export default function Invoices() {
   const { toast } = useToast();
   
   const createMutation = useCreateInvoice();
+  const updateStatusMutation = useUpdateInvoiceStatus();
   const [isOpen, setIsOpen] = useState(false);
+
+  const updateInvoiceStatus = (id: number, status: string) => {
+    updateStatusMutation.mutate({ id, status }, {
+      onSuccess: () => toast({ title: "Updated", description: `Invoice marked as ${status}.` }),
+    });
+  };
   const [selectedStudent, setSelectedStudent] = useState("");
   const [selectedCourse, setSelectedCourse] = useState("");
   const [amount, setAmount] = useState("");
@@ -106,21 +113,28 @@ export default function Invoices() {
       </div>
 
       <Card className="rounded-2xl shadow-lg border-border/50 overflow-hidden">
-        <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow>
-              <TableHead className="font-semibold py-4">Invoice Date</TableHead>
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow>
+                <TableHead className="font-semibold py-4">Invoice Date</TableHead>
+                <TableHead className="font-semibold">Due Date</TableHead>
               {isStaff && <TableHead className="font-semibold">Student</TableHead>}
-              <TableHead className="font-semibold">Program</TableHead>
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="text-right font-semibold">Amount</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+                <TableHead className="font-semibold">Program</TableHead>
+                <TableHead className="font-semibold">Status</TableHead>
+                <TableHead className="text-right font-semibold">Amount</TableHead>
+                {isStaff && <TableHead className="text-right font-semibold">Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
             {visibleInvoices?.map((inv: any) => (
               <TableRow key={inv.id} className="hover:bg-muted/30">
                 <TableCell className="font-medium">{format(new Date(inv.createdAt), 'MMM d, yyyy')}</TableCell>
-                {isStaff && <TableCell>{inv.user?.userId?.substring(0,8)}...</TableCell>}
+                <TableCell className="font-medium text-muted-foreground">{inv.dueDate ? format(new Date(inv.dueDate), 'MMM d, yyyy') : '—'}</TableCell>
+                {isStaff && (
+                  <TableCell>
+                    {inv.userAuth ? [inv.userAuth.firstName, inv.userAuth.lastName].filter(Boolean).join(' ') || inv.userAuth.email : inv.userId?.substring(0,8) + '...'}
+                  </TableCell>
+                )}
                 <TableCell>{inv.course?.name || `Course #${inv.courseId}`}</TableCell>
                 <TableCell>
                   <Badge variant={inv.status === 'paid' ? 'default' : 'outline'} className={inv.status === 'unpaid' ? 'border-amber-200 text-amber-700 bg-amber-50' : ''}>
@@ -128,11 +142,19 @@ export default function Invoices() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right font-bold text-foreground">R {inv.amount}</TableCell>
+                {isStaff && inv.status !== 'paid' && (
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button size="sm" variant="outline" className="rounded-lg h-8" onClick={() => updateInvoiceStatus(inv.id, 'partial')}>Partial</Button>
+                      <Button size="sm" className="rounded-lg h-8 bg-emerald-600 hover:bg-emerald-700" onClick={() => updateInvoiceStatus(inv.id, 'paid')}>Mark paid</Button>
+                    </div>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
             {visibleInvoices?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isStaff ? 5 : 4} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={isStaff ? 7 : 5} className="text-center py-12 text-muted-foreground">
                   No invoices found.
                 </TableCell>
               </TableRow>

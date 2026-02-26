@@ -99,6 +99,7 @@ export default function Courses() {
 
   const springsCourses = courses?.filter(c => c.campus === 'Springs') || [];
   const braamfonteinCourses = courses?.filter(c => c.campus === 'Braamfontein') || [];
+  const jhbCourses = courses?.filter(c => c.campus === 'JHB') || [];
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -199,9 +200,10 @@ export default function Courses() {
       </div>
 
       <Tabs defaultValue="springs" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md mb-8">
-          <TabsTrigger value="springs">Springs Campus</TabsTrigger>
-          <TabsTrigger value="braamfontein">Braamfontein Campus</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 max-w-2xl mb-8">
+          <TabsTrigger value="springs">Springs</TabsTrigger>
+          <TabsTrigger value="braamfontein">Braamfontein</TabsTrigger>
+          <TabsTrigger value="jhb">JHB</TabsTrigger>
         </TabsList>
         <TabsContent value="springs">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -217,6 +219,14 @@ export default function Courses() {
               <CourseCard key={course.id} course={course} isAdmin={isAdmin} profile={profile} handleEdit={handleEdit} handleDelete={handleDelete} />
             ))}
             {braamfonteinCourses.length === 0 && <EmptyState />}
+          </div>
+        </TabsContent>
+        <TabsContent value="jhb">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {jhbCourses.map((course: any) => (
+              <CourseCard key={course.id} course={course} isAdmin={isAdmin} profile={profile} handleEdit={handleEdit} handleDelete={handleDelete} />
+            ))}
+            {jhbCourses.length === 0 && <EmptyState />}
           </div>
         </TabsContent>
       </Tabs>
